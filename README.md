@@ -51,9 +51,15 @@ On data management, the most significant risk is the false positive: a large gen
 On the basis of this analysis, the report recommends that BookMyShow implement Trusttix as a direct, evidence-based response to the regulatory and reputational crisis exposed by the Coldplay sale, piloted on a smaller high-demand event before being scaled to protect future major ticket releases.
 
 References
+
 •	Beynon-Davies, P. (2013). Business information systems (2nd ed.). Palgrave Macmillan.
+
 •	Bocij, P., Greasley, A., & Hickie, S. (2015). Business information systems: Technology, development and management for the e-business (5th ed.). Pearson Education.
+
 •	Bourgeois, D. T. (2014). Information systems for business and beyond. The Saylor Foundation.
+
 •	CNN. (2024, October 1). Coldplay concert for $11,000? Uproar in India after tickets sold out in minutes on BookMyShow and resold. https://www.cnn.com/2024/10/01/asia/coldplay-concert-ticket-india-scalping-intl-hnk/index.html
+
 •	Laudon, K. C., & Laudon, J. P. (2022). Management information systems: Managing the digital firm (17th ed.). Pearson Education.
+
 •	Liu, F. T., Ting, K. M., & Zhou, Z.-H. (2008). Isolation forest. In Proceedings of the 2008 Eighth IEEE International Conference on Data Mining (pp. 413–422). IEEE.
