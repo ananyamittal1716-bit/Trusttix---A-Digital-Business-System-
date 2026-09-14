@@ -4,7 +4,7 @@ import Dashboard from "./Dashboard";
 
 export default function App() {
   return (
-    <BrowserRouter basename="/trusttix">
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />

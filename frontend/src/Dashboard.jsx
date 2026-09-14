@@ -47,7 +47,7 @@ export default function Dashboard() {
       setError("We couldn't sign you out. Please try again.");
       return;
     }
-    window.location.href = "/trusttix/";
+    window.location.href = "/";
   };
 
   const act = async (bookingId, decision) => {
