@@ -255,6 +255,4 @@ The project includes `frontend/vercel.json` so client-side routes such as `/dash
 | **Divyansh — Full-Stack Developer** | Frontend/application development; backend integration; Supabase integration; UI/UX; testing; deployment |
 | **Ananya — Full-Stack Developer** | Backend/data development; database architecture; authentication; system architecture; testing; documentation |
 
-## Academic Project Note
 
-Trusttix is intended for educational and portfolio evaluation purposes. Any production use should include a full security review, validated database policies, privacy controls, monitoring, backup procedures, and organizational access governance.
