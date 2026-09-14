@@ -15,12 +15,18 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) {
-      setError("Invalid email or password");
-    } else {
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        setError("We couldn't sign you in. Check your email and password, then try again.");
+        return;
+      }
+
       navigate("/dashboard");
+    } catch {
+      setError("Sign-in is unavailable right now. Please try again in a moment.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -52,21 +58,29 @@ export default function Login() {
   Fraud-Operations Admin Console
 </p>
 
-        <label style={{ color: "#aaa", fontSize: 12 }}>Email</label>
+        <label htmlFor="email" style={{ color: "#aaa", fontSize: 12 }}>Email</label>
         <input
+          id="email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          disabled={loading}
+          autoComplete="email"
+          aria-describedby={error ? "login-error" : undefined}
           style={inputStyle}
         />
 
-        <label style={{ color: "#aaa", fontSize: 12 }}>Password</label>
+        <label htmlFor="password" style={{ color: "#aaa", fontSize: 12 }}>Password</label>
         <input
+          id="password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          disabled={loading}
+          autoComplete="current-password"
+          aria-describedby={error ? "login-error" : undefined}
           style={inputStyle}
         />
 
@@ -91,7 +105,9 @@ export default function Login() {
         </button>
 
         {error && (
-          <p style={{ color: "#e5484d", fontSize: 13, textAlign: "center", marginTop: 14 }}>{error}</p>
+          <p id="login-error" role="alert" style={{ color: "#e5484d", fontSize: 13, textAlign: "center", marginTop: 14 }}>
+            {error}
+          </p>
         )}
       </form>
     </div>
