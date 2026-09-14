@@ -228,9 +228,12 @@ The project includes `frontend/vercel.json` so client-side routes such as `/dash
 - Add CI checks and preview deployments for pull requests.
 - Add monitoring, structured error reporting, and operational alerting.
 
-## Contributors
+### Contributors
 
-- **Ananya Mittal** — Project development, frontend implementation, integration, and documentation.
+| Contributor | Responsibilities |
+|---|---|
+| **Divyansh** | Frontend development, backend development, Supabase integration, authentication, dashboard development, UI/UX implementation, testing and deployment |
+| **Ananya** | Project architecture, database design, business logic, project planning, testing, documentation and project coordination |
 
 ## Academic Project Note
 
