@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import logo from "./assets/Logo.jpeg";
+import "./Dashboard.css";
 
 export default function Dashboard() {
   const [bookings, setBookings] = useState([]);
@@ -99,6 +100,7 @@ export default function Dashboard() {
 
   return (
     <div
+      className="dashboard"
       style={{
         minHeight: "100vh",
         background: "#0c0c0e",
@@ -107,7 +109,7 @@ export default function Dashboard() {
         padding: "32px 40px",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+      <div className="dashboard-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
         <div>
           <img src={logo} alt="Trusttix" style={{ height: 40, display: "block", marginBottom: 6 }} />
 <p style={{ margin: "4px 0 0", color: "#888", fontSize: 13 }}>
@@ -115,6 +117,7 @@ export default function Dashboard() {
 </p>
         </div>
         <button
+          className="logout-button"
           onClick={() => supabase.auth.signOut().then(() => (window.location.href = "/trusttix/"))}
           style={{
             background: "transparent",
@@ -129,7 +132,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: 16, marginBottom: 28 }}>
+      <div className="summary-grid" style={{ display: "flex", gap: 16, marginBottom: 28 }}>
         {[
           { label: "Total Bookings", value: summary.total, color: "#e6e6e6" },
           { label: "Flagged", value: summary.flagged, color: "#e5484d" },
@@ -138,6 +141,7 @@ export default function Dashboard() {
         ].map((card) => (
           <div
             key={card.label}
+            className="summary-card"
             style={{
               background: "#151517",
               border: "1px solid #232326",
@@ -152,11 +156,12 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+      <div className="filter-list" style={{ display: "flex", gap: 10, marginBottom: 16 }} aria-label="Filter bookings by status">
         {["all", "pending", "clean", "flagged", "cancelled"].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
+            aria-pressed={filter === f}
             style={{
               background: filter === f ? "#e5484d" : "#151517",
               color: filter === f ? "#0c0c0e" : "#ccc",
@@ -173,13 +178,13 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div style={{ background: "#151517", border: "1px solid #232326", borderRadius: 12, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+      <div className="bookings-table-scroll" style={{ background: "#151517", border: "1px solid #232326", borderRadius: 12, overflow: "hidden" }} tabIndex="0" aria-label="Booking review table. Scroll horizontally to see all columns.">
+        <table className="bookings-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "#1c1c1f", textAlign: "left" }}>
               {["Booking ID", "Account", "Amount", "Status", "Rule Score", "Anomaly Score", "Reasons", "Actions"].map(
                 (h) => (
-                  <th key={h} style={{ padding: "12px 16px", color: "#888", fontWeight: 600 }}>
+                  <th key={h} scope="col" style={{ padding: "12px 16px", color: "#888", fontWeight: 600 }}>
                     {h}
                   </th>
                 )
