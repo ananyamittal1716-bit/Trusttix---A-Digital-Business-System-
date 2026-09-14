@@ -1,295 +1,199 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import logo from "./assets/Logo.jpeg";
-import "./Dashboard.css";
+
+const filters = ["all", "pending", "clean", "flagged", "cancelled"];
 
 export default function Dashboard() {
   const [bookings, setBookings] = useState([]);
   const [riskScores, setRiskScores] = useState({});
   const [anomalyScores, setAnomalyScores] = useState({});
   const [filter, setFilter] = useState("all");
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
+  const [actionId, setActionId] = useState("");
 
-  const loadData = async () => {
-    setIsLoading(true);
-    setLoadError("");
+  const loadData = async (isRefresh = false) => {
+    setError("");
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+
     try {
-      const [bookingsResult, riskResult, anomalyResult] = await Promise.all([
+      const [{ data: bookingsData, error: bookingsError }, { data: riskData, error: riskError }, { data: anomalyData, error: anomalyError }] =
+        await Promise.all([
         supabase.from("bookings").select("*"),
         supabase.from("risk_scores").select("*"),
         supabase.from("anomaly_scores").select("*"),
       ]);
 
-      const dataError = bookingsResult.error || riskResult.error || anomalyResult.error;
-      if (dataError) throw dataError;
-
-      const bookingsData = bookingsResult.data;
-      const riskData = riskResult.data;
-      const anomalyData = anomalyResult.data;
-
-      setBookings(bookingsData || []);
-
-      const riskMap = {};
-      (riskData || []).forEach((r) => (riskMap[r.booking_id] = r));
-      setRiskScores(riskMap);
-
-      const anomalyMap = {};
-      (anomalyData || []).forEach((a) => (anomalyMap[a.booking_id] = a));
-      setAnomalyScores(anomalyMap);
+      if (bookingsError || riskError || anomalyError) {
+        setError("We couldn't load the latest review data. Please try again.");
+      } else {
+        setBookings(bookingsData || []);
+        setRiskScores(Object.fromEntries((riskData || []).map((score) => [score.booking_id, score])));
+        setAnomalyScores(Object.fromEntries((anomalyData || []).map((score) => [score.booking_id, score])));
+      }
     } catch {
-      setLoadError("Unable to load booking data. Please try again.");
+      setError("We couldn't load the latest review data. Please try again.");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    const initialize = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = "/";
+        return;
+      }
+      setAuthorized(true);
+      loadData();
+    };
+    initialize();
   }, []);
 
+  const handleLogout = async () => {
+    const { error: logoutError } = await supabase.auth.signOut();
+    if (logoutError) {
+      setError("We couldn't sign you out. Please try again.");
+      return;
+    }
+    window.location.href = "/";
+  };
+
   const act = async (bookingId, decision) => {
-    await supabase.from("bookings").update({ status: decision }).eq("booking_id", bookingId);
-    await supabase.from("review_actions").insert({
+    setActionId(`${bookingId}-${decision}`);
+    const { error: updateError } = await supabase.from("bookings").update({ status: decision }).eq("booking_id", bookingId);
+    const { data: userData } = await supabase.auth.getUser();
+    const { error: reviewError } = await supabase.from("review_actions").insert({
       booking_id: bookingId,
-      reviewed_by: (await supabase.auth.getUser()).data.user?.email || "admin",
-      decision: decision,
+      reviewed_by: userData.user?.email || "admin",
+      decision,
     });
-    loadData();
+    setActionId("");
+    if (updateError || reviewError) {
+      setError("That review action could not be saved. Please try again.");
+      return;
+    }
+    loadData(true);
   };
 
-  const visible = bookings.filter((b) => filter === "all" || b.status === filter);
-
-  const riskColor = (score) => {
-    if (score === undefined || score === null) return "#555";
-    if (score >= 60) return "#e5484d";
-    if (score >= 30) return "#f5a623";
-    return "#3dd68c";
-  };
-
-  const statusBadge = (status) => {
-    const colors = {
-      pending: "#8a8a8a",
-      clean: "#3dd68c",
-      flagged: "#e5484d",
-      cancelled: "#555",
-    };
-    return (
-      <span
-        style={{
-          background: colors[status] || "#555",
-          color: "#0c0c0e",
-          padding: "3px 10px",
-          borderRadius: 12,
-          fontSize: 12,
-          fontWeight: 600,
-          textTransform: "uppercase",
-        }}
-      >
-        {status}
-      </span>
-    );
-  };
-
+  const visible = bookings.filter((booking) => filter === "all" || booking.status === filter);
   const summary = {
     total: bookings.length,
-    flagged: bookings.filter((b) => b.status === "flagged").length,
-    clean: bookings.filter((b) => b.status === "clean").length,
-    pending: bookings.filter((b) => b.status === "pending").length,
+    flagged: bookings.filter((booking) => booking.status === "flagged").length,
+    clean: bookings.filter((booking) => booking.status === "clean").length,
+    pending: bookings.filter((booking) => booking.status === "pending").length,
   };
 
+  if (!authorized) {
+    return <main className="route-loading"><span className="spinner dark-spinner" /> Checking your session...</main>;
+  }
+
   return (
-    <div
-      className="dashboard"
-      style={{
-        minHeight: "100vh",
-        background: "#0c0c0e",
-        color: "#e6e6e6",
-        fontFamily: "'Segoe UI', sans-serif",
-        padding: "32px 40px",
-      }}
-    >
-      <div className="dashboard-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-        <div>
-          <img src={logo} alt="Trusttix" style={{ height: 40, display: "block", marginBottom: 6 }} />
-<p style={{ margin: "4px 0 0", color: "#888", fontSize: 13 }}>
-  Ticket Integrity & Fraud Review Console
-</p>
+    <main className="dashboard-shell">
+      <header className="topbar">
+        <div className="brand-lockup">
+          <img src={logo} alt="Trusttix" className="dashboard-logo" />
+          <span className="brand-divider" />
+          <span className="brand-context">Fraud operations</span>
         </div>
-        <button
-          className="logout-button"
-          onClick={() => supabase.auth.signOut().then(() => (window.location.href = "/trusttix/"))}
-          style={{
-            background: "transparent",
-            border: "1px solid #333",
-            color: "#aaa",
-            padding: "8px 16px",
-            borderRadius: 8,
-            cursor: "pointer",
-          }}
-        >
-          Log out
+        <div className="topbar-actions">
+          <span className="live-status"><span className="status-dot" /> Live</span>
+          <button className="ghost-button" onClick={handleLogout}>Log out</button>
+        </div>
+      </header>
+
+      <section className="dashboard-intro">
+        <div>
+          <p className="eyebrow">Overview / Booking integrity</p>
+          <h1>Review queue</h1>
+          <p className="intro-copy">Monitor risk signals and resolve bookings that need your attention.</p>
+        </div>
+        <button className="secondary-button" onClick={() => loadData(true)} disabled={loading || refreshing}>
+          <span aria-hidden="true" className={refreshing ? "refresh-icon spinning" : "refresh-icon"}>↻</span>
+          {refreshing ? "Refreshing" : "Refresh data"}
         </button>
-      </div>
+      </section>
 
-      <div className="summary-grid" style={{ display: "flex", gap: 16, marginBottom: 28 }}>
-        {[
-          { label: "Total Bookings", value: summary.total, color: "#e6e6e6" },
-          { label: "Flagged", value: summary.flagged, color: "#e5484d" },
-          { label: "Clean", value: summary.clean, color: "#3dd68c" },
-          { label: "Pending Review", value: summary.pending, color: "#f5a623" },
-        ].map((card) => (
-          <div
-            key={card.label}
-            className="summary-card"
-            style={{
-              background: "#151517",
-              border: "1px solid #232326",
-              borderRadius: 12,
-              padding: "16px 22px",
-              flex: 1,
-            }}
-          >
-            <div style={{ fontSize: 12, color: "#888", marginBottom: 6 }}>{card.label}</div>
-            <div style={{ fontSize: 26, fontWeight: 700, color: card.color }}>{card.value}</div>
+      <section className="summary-grid" aria-label="Booking summary">
+        <SummaryCard label="Total bookings" value={summary.total} detail="All activity" icon="◈" />
+        <SummaryCard label="Flagged" value={summary.flagged} detail="Needs attention" icon="!" tone="danger" />
+        <SummaryCard label="Clean" value={summary.clean} detail="Approved activity" icon="✓" tone="success" />
+        <SummaryCard label="Pending review" value={summary.pending} detail="Awaiting decision" icon="◷" tone="warning" />
+      </section>
+
+      {error && <div className="dashboard-alert" role="alert"><span aria-hidden="true">!</span>{error}</div>}
+
+      <section className="queue-card">
+        <div className="queue-toolbar">
+          <div>
+            <h2>Booking queue</h2>
+            <p>{visible.length} {visible.length === 1 ? "booking" : "bookings"} shown</p>
           </div>
-        ))}
-      </div>
+          <div className="filter-tabs" role="group" aria-label="Filter bookings">
+            {filters.map((option) => (
+              <button key={option} className={filter === option ? "filter-tab active" : "filter-tab"} onClick={() => setFilter(option)} aria-pressed={filter === option}>
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
 
-      <div className="filter-list" style={{ display: "flex", gap: 10, marginBottom: 16 }} aria-label="Filter bookings by status">
-        {["all", "pending", "clean", "flagged", "cancelled"].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            aria-pressed={filter === f}
-            style={{
-              background: filter === f ? "#e5484d" : "#151517",
-              color: filter === f ? "#0c0c0e" : "#ccc",
-              border: "1px solid #232326",
-              padding: "8px 16px",
-              borderRadius: 8,
-              cursor: "pointer",
-              textTransform: "capitalize",
-              fontWeight: filter === f ? 700 : 400,
-            }}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
-
-      <div className="bookings-table-scroll" style={{ background: "#151517", border: "1px solid #232326", borderRadius: 12, overflow: "hidden" }} tabIndex="0" aria-label="Booking review table. Scroll horizontally to see all columns.">
-        <table className="bookings-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          <thead>
-            <tr style={{ background: "#1c1c1f", textAlign: "left" }}>
-              {["Booking ID", "Account", "Amount", "Status", "Rule Score", "Anomaly Score", "Reasons", "Actions"].map(
-                (h) => (
-                  <th key={h} scope="col" style={{ padding: "12px 16px", color: "#888", fontWeight: 600 }}>
-                    {h}
-                  </th>
-                )
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr>
-                <td colSpan="8" style={tableMessageStyle} aria-live="polite">Loading bookings…</td>
-              </tr>
-            )}
-            {!isLoading && loadError && (
-              <tr>
-                <td colSpan="8" style={tableMessageStyle} role="alert">
-                  {loadError} <button onClick={loadData} style={retryBtn}>Retry</button>
-                </td>
-              </tr>
-            )}
-            {!isLoading && !loadError && visible.length === 0 && (
-              <tr>
-                <td colSpan="8" style={tableMessageStyle}>
-                  No {filter === "all" ? "bookings" : `${filter} bookings`} to review.
-                </td>
-              </tr>
-            )}
-            {!isLoading && !loadError && visible.map((b, i) => {
-              const risk = riskScores[b.booking_id];
-              const anomaly = anomalyScores[b.booking_id];
-              return (
-                <tr
-                  key={b.booking_id}
-                  style={{
-                    borderTop: "1px solid #232326",
-                    background: i % 2 === 0 ? "transparent" : "#131315",
-                  }}
-                >
-                  <td style={{ padding: "12px 16px", fontFamily: "monospace" }}>{b.booking_id}</td>
-                  <td style={{ padding: "12px 16px" }}>{b.account_id}</td>
-                  <td style={{ padding: "12px 16px" }}>₹{b.amount}</td>
-                  <td style={{ padding: "12px 16px" }}>{statusBadge(b.status)}</td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <span style={{ color: riskColor(risk?.score), fontWeight: 700 }}>
-                      {risk?.score ?? "-"}
-                    </span>
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    {anomaly ? (
-                      <span style={{ color: anomaly.is_outlier ? "#e5484d" : "#888" }}>
-                        {Number(anomaly.anomaly_score).toFixed(2)}
-                        {anomaly.is_outlier ? " ⚠" : ""}
-                      </span>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
-                  <td style={{ padding: "12px 16px", color: "#999", maxWidth: 220 }}>
-                    {risk?.reasons?.join(", ") || "-"}
-                  </td>
-                  <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
-                    <button onClick={() => act(b.booking_id, "clean")} style={actionBtn("#3dd68c")}>
-                      Approve
-                    </button>
-                    <button onClick={() => act(b.booking_id, "flagged")} style={actionBtn("#f5a623")}>
-                      Hold
-                    </button>
-                    <button onClick={() => act(b.booking_id, "cancelled")} style={actionBtn("#e5484d")}>
-                      Cancel
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
+        {loading ? (
+          <div className="table-state"><span className="spinner dark-spinner" /> Loading review queue...</div>
+        ) : visible.length === 0 ? (
+          <div className="table-state empty-state"><span className="empty-icon">✓</span><strong>No bookings in this view</strong><span>Try another filter or refresh the queue.</span></div>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <thead><tr>{["Booking ID", "Account", "Amount", "Status", "Rule score", "Anomaly", "Reasons", "Actions"].map((heading) => <th key={heading} scope="col">{heading}</th>)}</tr></thead>
+              <tbody>
+                {visible.map((booking) => {
+                  const risk = riskScores[booking.booking_id];
+                  const anomaly = anomalyScores[booking.booking_id];
+                  return (
+                    <tr key={booking.booking_id}>
+                      <td className="mono">{booking.booking_id}</td>
+                      <td>{booking.account_id}</td>
+                      <td className="amount">₹{booking.amount}</td>
+                      <td><StatusBadge status={booking.status} /></td>
+                      <td><span className="score" style={{ color: riskColor(risk?.score) }}>{risk?.score ?? "-"}</span></td>
+                      <td>{anomaly ? <span className={anomaly.is_outlier ? "anomaly outlier" : "anomaly"}>{Number(anomaly.anomaly_score).toFixed(2)}{anomaly.is_outlier ? " !" : ""}</span> : "-"}</td>
+                      <td className="reasons">{risk?.reasons?.join(", ") || "-"}</td>
+                      <td><div className="row-actions">
+                        <button className="action approve" disabled={Boolean(actionId)} onClick={() => act(booking.booking_id, "clean")}>{actionId === `${booking.booking_id}-clean` ? "Saving..." : "Approve"}</button>
+                        <button className="action hold" disabled={Boolean(actionId)} onClick={() => act(booking.booking_id, "flagged")}>Hold</button>
+                        <button className="action cancel" disabled={Boolean(actionId)} onClick={() => act(booking.booking_id, "cancelled")}>Cancel</button>
+                      </div></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+      <footer className="dashboard-footer">Trusttix <span>•</span> Secure fraud operations</footer>
+    </main>
   );
 }
 
-function actionBtn(color) {
-  return {
-    background: "transparent",
-    border: `1px solid ${color}`,
-    color: color,
-    padding: "5px 10px",
-    borderRadius: 6,
-    marginRight: 6,
-    cursor: "pointer",
-    fontSize: 12,
-  };
+function SummaryCard({ label, value, detail, icon, tone = "" }) {
+  return <article className={`summary-card ${tone}`}><div className="summary-icon">{icon}</div><div><p>{label}</p><strong>{value}</strong><span>{detail}</span></div></article>;
 }
 
-const tableMessageStyle = {
-  padding: "32px 16px",
-  textAlign: "center",
-  color: "#aaa",
-};
+function StatusBadge({ status }) {
+  return <span className={`status-badge ${status}`}>{status}</span>;
+}
 
-const retryBtn = {
-  background: "transparent",
-  border: "1px solid #e5484d",
-  borderRadius: 6,
-  color: "#e5484d",
-  cursor: "pointer",
-  marginLeft: 8,
-  padding: "4px 8px",
-};
+function riskColor(score) {
+  if (score === undefined || score === null) return "var(--text-muted)";
+  if (score >= 60) return "var(--danger)";
+  if (score >= 30) return "var(--warning)";
+  return "var(--success)";
+}
