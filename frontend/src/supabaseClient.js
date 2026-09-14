@@ -1,7 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = 'https://gszgvadlbmagtbhsyqbn.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdzemd2YWRsYm1hZ3RiaHN5cWJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwNDc1MDgsImV4cCI6MjEwNDYyMzUwOH0.cVeE-mpB3A2IaMOFiKZGzAUdB6cEnE1qOFoBNJl46BI';
+// Public browser values come from .env.local locally and deployment settings in production.
+// Never use a service-role key here.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error("Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY.");
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

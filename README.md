@@ -54,11 +54,23 @@ Trusttix combines a React dashboard with Supabase services. The application auth
 - React Router
 - CSS with responsive media queries
 
-### Backend and services
+### Backend Technology
 
 - Supabase Authentication
-- Supabase Postgres tables and API
+- Supabase PostgreSQL-backed data API
 - Vercel hosting and production deployment
+
+No separate custom API server, serverless function, or Edge Function is present in this repository.
+
+## Database
+
+The code reads `bookings`, `risk_scores`, and `anomaly_scores`; updates `bookings.status`; and inserts review records into `review_actions`. The browser combines booking and score records by `booking_id` for display.
+
+The exact database schema, keys, RLS policies, functions, and triggers have not been exported from the hosted project and are not claimed here. See [backend implementation](docs/backend-implementation.md) for the verified code-level interface.
+
+## Authentication
+
+Trusttix uses Supabase email/password authentication. The dashboard checks for an active session before loading data, uses the current user's email when recording a review, and signs out through Supabase Auth.
 
 ### Development tools
 
@@ -111,11 +123,18 @@ The frontend uses Supabase for:
 
 Use Row Level Security policies and least-privilege database access in the Supabase project. Never place a Supabase service-role key in frontend code.
 
+For the complete, evidence-based backend inventory and known limitations, see [docs/backend-implementation.md](docs/backend-implementation.md). The [supabase directory](supabase/README.md) documents the safe path for adding reviewed database metadata when the project can be linked with the Supabase CLI.
+
 ## Project Structure
 
 ```text
 .
 ├── README.md
+├── docs/
+│   ├── backend-implementation.md
+│   └── system-architecture.md
+├── supabase/
+│   └── README.md
 └── frontend/
     ├── public/
     ├── src/
@@ -127,6 +146,7 @@ Use Row Level Security policies and least-privilege database access in the Supab
     │   ├── main.jsx
     │   └── supabaseClient.js
     ├── index.html
+    ├── .env.example
     ├── package.json
     ├── package-lock.json
     ├── vercel.json
@@ -169,7 +189,7 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key
 
 Only the public Supabase URL and publishable/anonymous client key belong in a browser application. The service-role key must remain server-side and must never be exposed to users.
 
-The current repository preserves its existing Supabase client configuration in `frontend/src/supabaseClient.js`. If the project configuration is changed to environment-based values, use the variable names above and keep `.env.local` out of Git.
+`frontend/src/supabaseClient.js` reads these variables at build time. Copy `frontend/.env.example` to `frontend/.env.local` for local development, and configure the same public values in Vercel for production. Keep `.env.local` out of Git.
 
 ## Running the Frontend
 
@@ -232,8 +252,8 @@ The project includes `frontend/vercel.json` so client-side routes such as `/dash
 
 | Contributor | Responsibilities |
 |---|---|
-| **Divyansh** | Frontend development, backend development, Supabase integration, authentication, dashboard development, UI/UX implementation, testing and deployment |
-| **Ananya** | Project architecture, database design, business logic, project planning, testing, documentation and project coordination |
+| **Divyansh — Full-Stack Developer** | Frontend/application development; backend integration; Supabase integration; UI/UX; testing; deployment |
+| **Ananya — Full-Stack Developer** | Backend/data development; database architecture; authentication; system architecture; testing; documentation |
 
 ## Academic Project Note
 
