@@ -7,21 +7,40 @@ export default function Dashboard() {
   const [riskScores, setRiskScores] = useState({});
   const [anomalyScores, setAnomalyScores] = useState({});
   const [filter, setFilter] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   const loadData = async () => {
-    const { data: bookingsData } = await supabase.from("bookings").select("*");
-    const { data: riskData } = await supabase.from("risk_scores").select("*");
-    const { data: anomalyData } = await supabase.from("anomaly_scores").select("*");
+    setIsLoading(true);
+    setLoadError("");
+    try {
+      const [bookingsResult, riskResult, anomalyResult] = await Promise.all([
+        supabase.from("bookings").select("*"),
+        supabase.from("risk_scores").select("*"),
+        supabase.from("anomaly_scores").select("*"),
+      ]);
 
-    setBookings(bookingsData || []);
+      const dataError = bookingsResult.error || riskResult.error || anomalyResult.error;
+      if (dataError) throw dataError;
 
-    const riskMap = {};
-    (riskData || []).forEach((r) => (riskMap[r.booking_id] = r));
-    setRiskScores(riskMap);
+      const bookingsData = bookingsResult.data;
+      const riskData = riskResult.data;
+      const anomalyData = anomalyResult.data;
 
-    const anomalyMap = {};
-    (anomalyData || []).forEach((a) => (anomalyMap[a.booking_id] = a));
-    setAnomalyScores(anomalyMap);
+      setBookings(bookingsData || []);
+
+      const riskMap = {};
+      (riskData || []).forEach((r) => (riskMap[r.booking_id] = r));
+      setRiskScores(riskMap);
+
+      const anomalyMap = {};
+      (anomalyData || []).forEach((a) => (anomalyMap[a.booking_id] = a));
+      setAnomalyScores(anomalyMap);
+    } catch {
+      setLoadError("Unable to load booking data. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -168,7 +187,26 @@ export default function Dashboard() {
             </tr>
           </thead>
           <tbody>
-            {visible.map((b, i) => {
+            {isLoading && (
+              <tr>
+                <td colSpan="8" style={tableMessageStyle} aria-live="polite">Loading bookings…</td>
+              </tr>
+            )}
+            {!isLoading && loadError && (
+              <tr>
+                <td colSpan="8" style={tableMessageStyle} role="alert">
+                  {loadError} <button onClick={loadData} style={retryBtn}>Retry</button>
+                </td>
+              </tr>
+            )}
+            {!isLoading && !loadError && visible.length === 0 && (
+              <tr>
+                <td colSpan="8" style={tableMessageStyle}>
+                  No {filter === "all" ? "bookings" : `${filter} bookings`} to review.
+                </td>
+              </tr>
+            )}
+            {!isLoading && !loadError && visible.map((b, i) => {
               const risk = riskScores[b.booking_id];
               const anomaly = anomalyScores[b.booking_id];
               return (
@@ -234,3 +272,19 @@ function actionBtn(color) {
     fontSize: 12,
   };
 }
+
+const tableMessageStyle = {
+  padding: "32px 16px",
+  textAlign: "center",
+  color: "#aaa",
+};
+
+const retryBtn = {
+  background: "transparent",
+  border: "1px solid #e5484d",
+  borderRadius: 6,
+  color: "#e5484d",
+  cursor: "pointer",
+  marginLeft: 8,
+  padding: "4px 8px",
+};
