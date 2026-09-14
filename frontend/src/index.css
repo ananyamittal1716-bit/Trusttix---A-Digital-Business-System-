@@ -60,6 +60,7 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .aside-metrics strong { display: block; margin-bottom: 6px; color: #dce4f2; font-size: 16px; letter-spacing: 0; text-transform: none; }
 
 .dashboard-shell { max-width: 1440px; min-height: 100vh; margin: auto; padding: 0 42px 30px; }
+.route-loading { display: flex; min-height: 100vh; align-items: center; justify-content: center; gap: 8px; color: var(--text-muted); background: var(--bg); font-size: 13px; }
 .topbar { display: flex; justify-content: space-between; align-items: center; height: 78px; border-bottom: 1px solid #1d2737; }
 .dashboard-logo { width: 105px; height: auto; border-radius: 4px; }
 .brand-divider { width: 1px; height: 18px; background: var(--border); }

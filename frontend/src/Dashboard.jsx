@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [anomalyScores, setAnomalyScores] = useState({});
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [actionId, setActionId] = useState("");
@@ -38,7 +39,16 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    loadData();
+    const initialize = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = "/";
+        return;
+      }
+      setAuthorized(true);
+      loadData();
+    };
+    initialize();
   }, []);
 
   const handleLogout = async () => {
@@ -74,6 +84,10 @@ export default function Dashboard() {
     clean: bookings.filter((booking) => booking.status === "clean").length,
     pending: bookings.filter((booking) => booking.status === "pending").length,
   };
+
+  if (!authorized) {
+    return <main className="route-loading"><span className="spinner dark-spinner" /> Checking your session...</main>;
+  }
 
   return (
     <main className="dashboard-shell">
