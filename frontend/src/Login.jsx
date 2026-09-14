@@ -2,6 +2,7 @@ import logo from "./assets/Logo.jpeg";
 import { useState } from "react";
 import { supabase } from "./supabaseClient";
 import { useNavigate } from "react-router-dom";
+import "./Login.css";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -25,6 +26,7 @@ export default function Login() {
 
   return (
     <div
+      className="login-page"
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -35,6 +37,7 @@ export default function Login() {
       }}
     >
       <form
+        className="login-card"
         onSubmit={handleLogin}
         style={{
           background: "#151517",
@@ -68,6 +71,7 @@ export default function Login() {
         />
 
         <button
+          className="login-submit"
           type="submit"
           disabled={loading}
           style={{
