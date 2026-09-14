@@ -28,6 +28,15 @@ export default function Dashboard() {
     loadData();
   }, []);
 
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Unable to log out:", error);
+      return;
+    }
+    window.location.href = "/trusttix/";
+  };
+
   const act = async (bookingId, decision) => {
     await supabase.from("bookings").update({ status: decision }).eq("booking_id", bookingId);
     await supabase.from("review_actions").insert({
@@ -96,7 +105,7 @@ export default function Dashboard() {
 </p>
         </div>
         <button
-          onClick={() => supabase.auth.signOut().then(() => (window.location.href = "/trusttix/"))}
+          onClick={handleLogout}
           style={{
             background: "transparent",
             border: "1px solid #333",
